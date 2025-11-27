@@ -23,6 +23,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Strong focus-visible helper for accessibility */
 .focus-ring {
   @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-white;
 }
@@ -32,7 +33,7 @@ body {
   scroll-behavior: smooth;
 }
 .carousel::-webkit-scrollbar {
-  height: 10px;
+  height: 8px;
 }
 .carousel::-webkit-scrollbar-track {
   background: transparent;

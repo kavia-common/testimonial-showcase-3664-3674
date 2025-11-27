@@ -8,19 +8,24 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
  * Props:
  * - items?: Array<{ id: string|number, name: string, role: string, rating?: number, text: string }>
  *   Optional array of testimonial items. If omitted, a default dataset is used.
+ * - pill?: string
+ *   Optional small pill tag above the heading. Defaults to "What clients say".
  * - heading?: string
- *   Optional heading text. Defaults to "What our customers say".
+ *   Optional heading text. Defaults to "Testimonials that speak for themselves".
  * - subheading?: string
- *   Optional subheading text below the heading.
+ *   Optional subheading text for supportive context.
  * - className?: string
  *   Optional extra class names for the outer section.
  * - showStars?: boolean
  *   Toggle displaying rating stars. Defaults to true.
  * - announceChanges?: boolean
  *   When true (default), slide changes are announced to assistive tech via a live region.
+ * - showDots?: boolean
+ *   Show pagination dots synced to the snap index. Defaults to true.
  *
  * Usage:
  * <TestimonialCarousel
+ *   pill="What clients say"
  *   heading="Loved by modern teams"
  *   subheading="Real feedback from people using our product daily."
  *   items={[{ id:1, name:'Jane Doe', role:'PM, Acme', rating:5, text:'Great!' }]}
@@ -31,18 +36,23 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
  * - Buttons have visible focus rings and disabled states.
  * - Scroll snapping with smooth behavior; swipe support on touch devices.
  * - ARIA: region with roledescription="carousel", slides labeled, live region for announcements.
+ * - Dots: buttons with aria-label "Go to slide N". Live region announces slide changes.
  *
- * Theming:
- * - Colors use Tailwind tokens extended in tailwind.config.js:
- *   primary (#2563EB) and secondary (#F59E0B) accents, surface, text, background.
+ * Visual Design:
+ * - Section has subtle gradient bg, soft border, rounded container.
+ * - Cards: glassmorphism-esque with 1px border, backdrop blur, gradient overlay.
+ * - Larger quote with opening quote SVG accent in secondary color (#F59E0B).
+ * - Compact circular arrow buttons in primary (#2563EB) with hover/disabled states.
  */
 export default function TestimonialCarousel({
   items,
-  heading = "What our customers say",
-  subheading = "Real feedback from teams using our platform every day.",
+  pill = "What clients say",
+  heading = "Testimonials that speak for themselves",
+  subheading = "Modern teams across industries rely on our platform every day.",
   className = "",
   showStars = true,
   announceChanges = true,
+  showDots = true,
 }) {
   const containerRef = useRef(null);
   const liveRef = useRef(null);
@@ -131,10 +141,8 @@ export default function TestimonialCarousel({
     setCanScrollLeft(scrollLeft > 0);
     setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
 
-    // compute approximate active index based on scroll position and card width
     const children = Array.from(el.children || []);
     if (children.length) {
-      // find the child whose left edge is closest to the scrollLeft
       let closestIdx = 0;
       let closestDelta = Number.POSITIVE_INFINITY;
       children.forEach((child, idx) => {
@@ -189,21 +197,32 @@ export default function TestimonialCarousel({
     }
   };
 
+  const goToIndex = (index) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const child = el.children[index];
+    if (child) {
+      el.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
+    }
+  };
+
   return (
     <section
       className={`relative w-full ${className}`}
       aria-label="Customer testimonials"
       onKeyDown={onKeyDown}
     >
-      {/* Section container with subtle gradient bg */}
+      {/* Section container with subtle gradient bg and soft border */}
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-16">
-        <div className="rounded-3xl bg-gradient-to-br from-blue-500/10 to-gray-50 p-6 sm:p-10 shadow-soft border border-gray-100/70">
+        <div className="relative rounded-3xl bg-gradient-to-br from-blue-500/10 to-gray-50 p-6 sm:p-10 border border-gray-200/60 shadow-soft">
+          {/* Inner subtle ring and rounded container for glass pane illusion */}
+          <div className="absolute inset-0 rounded-3xl pointer-events-none [mask-image:radial-gradient(white,transparent_72%)]" />
           {/* Heading block */}
           <div className="text-center mb-8 sm:mb-12">
-            <p className="inline-flex items-center rounded-full border border-blue-200/60 bg-white/60 px-3 py-1 text-xs font-medium text-primary">
-              Testimonials
+            <p className="inline-flex items-center rounded-full border border-gray-300/60 bg-white/60 backdrop-blur px-3 py-1 text-[11px] sm:text-xs font-medium text-primary tracking-wide">
+              {pill}
             </p>
-            <h2 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-semibold tracking-tight text-text">
+            <h2 className="mt-4 text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-text">
               {heading}
             </h2>
             {subheading ? (
@@ -243,7 +262,7 @@ export default function TestimonialCarousel({
             {/* Scrollable container with snap behavior */}
             <div
               ref={containerRef}
-              className="carousel snap-container overflow-x-auto overflow-y-hidden flex gap-4 sm:gap-6 scroll-smooth px-1 md:px-2 py-1"
+              className="carousel snap-container overflow-x-auto overflow-y-hidden flex gap-3 sm:gap-4 md:gap-5 scroll-smooth px-1 sm:px-2 py-1 md:py-2"
               role="region"
               aria-roledescription="carousel"
               aria-label="Testimonials"
@@ -253,26 +272,31 @@ export default function TestimonialCarousel({
                 <article
                   key={t.id}
                   className="
-                    snap-item bg-surface
+                    snap-item relative
                     rounded-xl md:rounded-2xl
-                    shadow-soft border border-gray-100
+                    border border-gray-200/70
+                    bg-white/70 backdrop-blur
                     p-5 sm:p-6 md:p-7
                     transition-transform duration-300
                     hover:-translate-y-0.5 focus-within:-translate-y-0.5
                     flex-shrink-0
-                    w-[90%] sm:w-[100%] md:w-[60%] lg:w-[40%]
+                    w-[100%] sm:w-[100%] md:w-[66%] lg:w-[45%]
+                    group
+                    overflow-hidden
                   "
                   aria-roledescription="slide"
                   aria-label={`Slide ${idx + 1} of ${totalSlides}`}
                 >
+                  {/* subtle gradient overlay for glassmorphism depth */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-gray-50" />
                   {/* Card header: avatar initials and author info */}
-                  <div className="flex items-center gap-4">
+                  <div className="relative flex items-center gap-4">
                     <AvatarInitials name={t.name} />
                     <div className="min-w-0">
                       <h3 className="text-base md:text-lg font-semibold text-text truncate">
                         {t.name}
                       </h3>
-                      <p className="text-sm md:text-base text-gray-500 truncate">
+                      <p className="text-sm md:text-[15px] text-gray-500 truncate">
                         {t.role}
                       </p>
                     </div>
@@ -281,7 +305,7 @@ export default function TestimonialCarousel({
                   {/* Optional star rating */}
                   {showStars && (
                     <div
-                      className="mt-4 flex items-center"
+                      className="relative mt-3 sm:mt-4 flex items-center"
                       aria-label={`${t.rating ?? 0} out of 5 stars`}
                     >
                       {Array.from({ length: 5 }).map((_, i) => (
@@ -290,13 +314,37 @@ export default function TestimonialCarousel({
                     </div>
                   )}
 
-                  {/* Quote text */}
-                  <p className="mt-4 md:mt-5 text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed">
-                    “{t.text}”
-                  </p>
+                  {/* Quote with leading SVG accent */}
+                  <div className="relative mt-4 md:mt-5">
+                    <span className="inline-block align-top mr-2" aria-hidden="true">
+                      <QuoteIcon />
+                    </span>
+                    <p className="inline text-gray-800 text-[17px] sm:text-[18px] md:text-[20px] leading-[1.6]">
+                      {t.text}
+                    </p>
+                  </div>
                 </article>
               ))}
             </div>
+
+            {/* Pagination dots */}
+            {showDots && (
+              <div className="mt-6 flex items-center justify-center gap-2">
+                {testimonials.map((_, i) => {
+                  const active = i === activeIndex;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      data-active={active ? "true" : "false"}
+                      aria-label={`Go to slide ${i + 1}`}
+                      onClick={() => goToIndex(i)}
+                      className="h-2.5 w-2.5 rounded-full bg-gray-300/70 hover:bg-gray-400/80 focus-ring data-[active=true]:bg-primary data-[active=true]:w-3 data-[active=true]:h-3 transition-[background-color,width,height] duration-200"
+                    />
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -306,15 +354,19 @@ export default function TestimonialCarousel({
 
 // PUBLIC_INTERFACE
 function ArrowButton({ direction, onClick, disabled, className = "", ariaLabel }) {
-  /** Accessible arrow button with visible focus ring and disabled state. */
-  const common =
-    "absolute top-1/2 -translate-y-1/2 z-10 h-11 w-11 md:h-12 md:w-12 rounded-full bg-white border border-gray-200 shadow-soft text-primary hover:bg-primary hover:text-white transition-colors focus-ring disabled:opacity-40 disabled:cursor-not-allowed";
+  /**
+   * Accessible arrow button with strong focus ring and disabled state.
+   * Compact circular with primary color hover and tooltip via aria-label.
+   */
+  const base =
+    "absolute top-1/2 -translate-y-1/2 z-10 h-10 w-10 md:h-11 md:w-11 rounded-full border text-primary bg-white/95 border-gray-200 shadow-soft transition-colors focus-ring disabled:opacity-40 disabled:cursor-not-allowed";
+  const hover = "hover:bg-primary hover:text-white";
   const pos = direction === "left" ? "left-0" : "right-0";
   const icon =
     direction === "left" ? (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 md:h-6 md:w-6"
+        className="h-5 w-5 md:h-5.5 md:w-5.5"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -325,7 +377,7 @@ function ArrowButton({ direction, onClick, disabled, className = "", ariaLabel }
     ) : (
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 md:h-6 md:w-6"
+        className="h-5 w-5 md:h-5.5 md:w-5.5"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
@@ -338,7 +390,7 @@ function ArrowButton({ direction, onClick, disabled, className = "", ariaLabel }
   return (
     <button
       type="button"
-      className={`${common} ${pos} ${className}`}
+      className={`${base} ${hover} ${pos} ${className}`}
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
@@ -368,8 +420,8 @@ function Star({ filled }) {
 // PUBLIC_INTERFACE
 function AvatarInitials({ name }) {
   /**
-   * Avatar placeholder with colored circle and initials.
-   * No images are used; initials are derived from name (first two letters).
+   * Avatar placeholder with colored circle and initials (no images).
+   * Initials derived from name (first two letters).
    */
   const initials = (name || "")
     .split(" ")
@@ -379,12 +431,27 @@ function AvatarInitials({ name }) {
     .join("")
     .toUpperCase();
 
-  // Color ring effect using primary/secondary tones for subtle visual interest
   return (
     <div className="relative">
       <div className="h-12 w-12 md:h-14 md:w-14 rounded-full bg-gradient-to-br from-primary/20 to-secondary/30 flex items-center justify-center text-primary font-semibold ring-1 ring-primary/20">
         {initials}
       </div>
     </div>
+  );
+}
+
+// PUBLIC_INTERFACE
+function QuoteIcon() {
+  /** Decorative opening quote SVG in secondary color. */
+  return (
+    <svg
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-6 w-6 md:h-7 md:w-7 text-secondary inline-block translate-y-[-2px]"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M7.17 6C5.42 6 4 7.43 4 9.2c0 1.54 1.13 2.8 2.67 2.8.2 0 .4-.02.6-.06-.3 1.7-1.7 3-3.4 3.06v2c3.3-.07 6-2.8 6.1-6.1V6H7.17zm9 0c-1.76 0-3.17 1.43-3.17 3.2 0 1.54 1.13 2.8 2.67 2.8.2 0 .4-.02.6-.06-.3 1.7-1.7 3-3.4 3.06v2c3.3-.07 6-2.8 6.1-6.1V6h-2.8z" />
+    </svg>
   );
 }
