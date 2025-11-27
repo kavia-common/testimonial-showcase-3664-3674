@@ -20,8 +20,6 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
  *   Toggle displaying rating stars. Defaults to true.
  * - announceChanges?: boolean
  *   When true (default), slide changes are announced to assistive tech via a live region.
- * - showDots?: boolean
- *   Show pagination dots synced to the snap index. Defaults to true.
  *
  * Usage:
  * <TestimonialCarousel
@@ -33,16 +31,13 @@ import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
  *
  * Accessibility and Interaction:
  * - Keyboard: ArrowLeft / ArrowRight scroll one viewport width.
- * - Buttons have visible focus rings and disabled states.
  * - Scroll snapping with smooth behavior; swipe support on touch devices.
  * - ARIA: region with roledescription="carousel", slides labeled, live region for announcements.
- * - Dots: buttons with aria-label "Go to slide N". Live region announces slide changes.
  *
  * Visual Design:
  * - Section has subtle gradient bg, soft border, rounded container.
  * - Cards: glassmorphism-esque with 1px border, backdrop blur, gradient overlay.
  * - Larger quote with opening quote SVG accent in secondary color (#F59E0B).
- * - Compact circular arrow buttons in primary (#2563EB) with hover/disabled states.
  */
 export default function TestimonialCarousel({
   items,
@@ -52,12 +47,9 @@ export default function TestimonialCarousel({
   className = "",
   showStars = true,
   announceChanges = true,
-  showDots = true,
 }) {
   const containerRef = useRef(null);
   const liveRef = useRef(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
 
   // Default testimonials when no props.items provided
@@ -132,15 +124,12 @@ export default function TestimonialCarousel({
 
   const totalSlides = testimonials.length;
 
-  // Update scroll buttons and active index on scroll/resize
+  // Update active index on scroll/resize
   const updateScrollState = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
-    const { scrollLeft, scrollWidth, clientWidth } = el;
 
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-
+    const { scrollLeft } = el;
     const children = Array.from(el.children || []);
     if (children.length) {
       let closestIdx = 0;
@@ -187,6 +176,7 @@ export default function TestimonialCarousel({
     el.scrollBy({ left: dir * el.clientWidth, behavior: "smooth" });
   };
 
+  // Keyboard navigation: arrow keys while focus is within the scroll container or section
   const onKeyDown = (e) => {
     if (e.key === "ArrowRight") {
       e.preventDefault();
@@ -194,15 +184,6 @@ export default function TestimonialCarousel({
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       scrollByViewport(-1);
-    }
-  };
-
-  const goToIndex = (index) => {
-    const el = containerRef.current;
-    if (!el) return;
-    const child = el.children[index];
-    if (child) {
-      el.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
     }
   };
 
@@ -218,7 +199,7 @@ export default function TestimonialCarousel({
           {/* Inner subtle ring and rounded container for glass pane illusion */}
           <div className="absolute inset-0 rounded-3xl pointer-events-none [mask-image:radial-gradient(white,transparent_72%)]" />
           {/* Heading block */}
-          <div className="text-center mb-8 sm:mb-12">
+          <div className="text-center mb-8 sm:mb-10">
             <p className="inline-flex items-center rounded-full border border-gray-300/60 bg-white/60 backdrop-blur px-3 py-1 text-[11px] sm:text-xs font-medium text-primary tracking-wide">
               {pill}
             </p>
@@ -232,171 +213,85 @@ export default function TestimonialCarousel({
             ) : null}
           </div>
 
-          {/* Carousel wrapper with arrow controls */}
-          <div className="relative">
-            {/* Left Arrow - desktop only */}
-            <ArrowButton
-              direction="left"
-              onClick={() => scrollByViewport(-1)}
-              disabled={!canScrollLeft}
-              className="hidden md:flex left-0 -translate-x-1/2"
-              ariaLabel="Previous testimonials"
-            />
-            {/* Right Arrow - desktop only */}
-            <ArrowButton
-              direction="right"
-              onClick={() => scrollByViewport(1)}
-              disabled={!canScrollRight}
-              className="hidden md:flex right-0 translate-x-1/2"
-              ariaLabel="Next testimonials"
-            />
+          {/* Live region for announcements */}
+          <div
+            ref={liveRef}
+            className="sr-only"
+            aria-live="polite"
+            aria-atomic="true"
+          />
 
-            {/* Live region for announcements */}
-            <div
-              ref={liveRef}
-              className="sr-only"
-              aria-live="polite"
-              aria-atomic="true"
-            />
-
-            {/* Scrollable container with snap behavior */}
-            <div
-              ref={containerRef}
-              className="carousel snap-container overflow-x-auto overflow-y-hidden flex gap-3 sm:gap-4 md:gap-5 scroll-smooth px-1 sm:px-2 py-1 md:py-2"
-              role="region"
-              aria-roledescription="carousel"
-              aria-label="Testimonials"
-              tabIndex={0}
-            >
-              {testimonials.map((t, idx) => (
-                <article
-                  key={t.id}
-                  className="
-                    snap-item relative
-                    rounded-xl md:rounded-2xl
-                    border border-gray-200/70
-                    bg-white/70 backdrop-blur
-                    p-5 sm:p-6 md:p-7
-                    transition-transform duration-300
-                    hover:-translate-y-0.5 focus-within:-translate-y-0.5
-                    flex-shrink-0
-                    w-[100%] sm:w-[100%] md:w-[66%] lg:w-[45%]
-                    group
-                    overflow-hidden
-                  "
-                  aria-roledescription="slide"
-                  aria-label={`Slide ${idx + 1} of ${totalSlides}`}
-                >
-                  {/* subtle gradient overlay for glassmorphism depth */}
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-gray-50" />
-                  {/* Card header: avatar initials and author info */}
-                  <div className="relative flex items-center gap-4">
-                    <AvatarInitials name={t.name} />
-                    <div className="min-w-0">
-                      <h3 className="text-base md:text-lg font-semibold text-text truncate">
-                        {t.name}
-                      </h3>
-                      <p className="text-sm md:text-[15px] text-gray-500 truncate">
-                        {t.role}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Optional star rating */}
-                  {showStars && (
-                    <div
-                      className="relative mt-3 sm:mt-4 flex items-center"
-                      aria-label={`${t.rating ?? 0} out of 5 stars`}
-                    >
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} filled={i < (t.rating ?? 0)} />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Quote with leading SVG accent */}
-                  <div className="relative mt-4 md:mt-5">
-                    <span className="inline-block align-top mr-2" aria-hidden="true">
-                      <QuoteIcon />
-                    </span>
-                    <p className="inline text-gray-800 text-[17px] sm:text-[18px] md:text-[20px] leading-[1.6]">
-                      {t.text}
+          {/* Scrollable container with snap behavior; padding adjusted now that arrows/dots are removed */}
+          <div
+            ref={containerRef}
+            className="carousel snap-container overflow-x-auto overflow-y-hidden flex gap-3 sm:gap-4 md:gap-5 scroll-smooth px-1 sm:px-2 py-1 md:py-2"
+            role="region"
+            aria-roledescription="carousel"
+            aria-label="Testimonials"
+            tabIndex={0}
+          >
+            {testimonials.map((t, idx) => (
+              <article
+                key={t.id}
+                className="
+                  snap-item relative
+                  rounded-xl md:rounded-2xl
+                  border border-gray-200/70
+                  bg-white/70 backdrop-blur
+                  p-5 sm:p-6 md:p-7
+                  transition-transform duration-300
+                  hover:-translate-y-0.5 focus-within:-translate-y-0.5
+                  flex-shrink-0
+                  w-[100%] sm:w-[100%] md:w-[66%] lg:w-[45%]
+                  group
+                  overflow-hidden
+                "
+                aria-roledescription="slide"
+                aria-label={`Slide ${idx + 1} of ${totalSlides}`}
+              >
+                {/* subtle gradient overlay for glassmorphism depth */}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-gray-50" />
+                {/* Card header: avatar initials and author info */}
+                <div className="relative flex items-center gap-4">
+                  <AvatarInitials name={t.name} />
+                  <div className="min-w-0">
+                    <h3 className="text-base md:text-lg font-semibold text-text truncate">
+                      {t.name}
+                    </h3>
+                    <p className="text-sm md:text-[15px] text-gray-500 truncate">
+                      {t.role}
                     </p>
                   </div>
-                </article>
-              ))}
-            </div>
+                </div>
 
-            {/* Pagination dots */}
-            {showDots && (
-              <div className="mt-6 flex items-center justify-center gap-2">
-                {testimonials.map((_, i) => {
-                  const active = i === activeIndex;
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      data-active={active ? "true" : "false"}
-                      aria-label={`Go to slide ${i + 1}`}
-                      onClick={() => goToIndex(i)}
-                      className="h-2.5 w-2.5 rounded-full bg-gray-300/70 hover:bg-gray-400/80 focus-ring data-[active=true]:bg-primary data-[active=true]:w-3 data-[active=true]:h-3 transition-[background-color,width,height] duration-200"
-                    />
-                  );
-                })}
-              </div>
-            )}
+                {/* Optional star rating */}
+                {showStars && (
+                  <div
+                    className="relative mt-3 sm:mt-4 flex items-center"
+                    aria-label={`${t.rating ?? 0} out of 5 stars`}
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star key={i} filled={i < (t.rating ?? 0)} />
+                    ))}
+                  </div>
+                )}
+
+                {/* Quote with leading SVG accent */}
+                <div className="relative mt-4 md:mt-5">
+                  <span className="inline-block align-top mr-2" aria-hidden="true">
+                    <QuoteIcon />
+                  </span>
+                  <p className="inline text-gray-800 text-[17px] sm:text-[18px] md:text-[20px] leading-[1.6]">
+                    {t.text}
+                  </p>
+                </div>
+              </article>
+            ))}
           </div>
+          {/* No arrows or dots; spacing already balanced via surrounding padding/margins */}
         </div>
       </div>
     </section>
-  );
-}
-
-// PUBLIC_INTERFACE
-function ArrowButton({ direction, onClick, disabled, className = "", ariaLabel }) {
-  /**
-   * Accessible arrow button with strong focus ring and disabled state.
-   * Compact circular with primary color hover and tooltip via aria-label.
-   */
-  const base =
-    "absolute top-1/2 -translate-y-1/2 z-10 h-10 w-10 md:h-11 md:w-11 rounded-full border text-primary bg-white/95 border-gray-200 shadow-soft transition-colors focus-ring disabled:opacity-40 disabled:cursor-not-allowed";
-  const hover = "hover:bg-primary hover:text-white";
-  const pos = direction === "left" ? "left-0" : "right-0";
-  const icon =
-    direction === "left" ? (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 md:h-5.5 md:w-5.5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-      </svg>
-    ) : (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 md:h-5.5 md:w-5.5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        aria-hidden="true"
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-      </svg>
-    );
-
-  return (
-    <button
-      type="button"
-      className={`${base} ${hover} ${pos} ${className}`}
-      onClick={onClick}
-      disabled={disabled}
-      aria-label={ariaLabel}
-    >
-      {icon}
-    </button>
   );
 }
 
